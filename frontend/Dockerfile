@@ -2,12 +2,17 @@
 # Build stage — using Yarn 4 with Node 20
 # ----------------------------------------------------
 FROM node:20-alpine AS build
+
 WORKDIR /app
-COPY package.json yarn.lock ./
+
+COPY package.json yarn.lock .yarnrc.yml ./
+
 COPY .yarn .yarn
-COPY .yarnrc.yml ./
+
 RUN corepack enable && yarn install --immutable
+
 COPY . .
+
 RUN yarn build
 
 # ----------------------------------------------------
