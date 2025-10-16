@@ -53,4 +53,10 @@ export default function App() {
       {renderDashboard()}
     </DashboardLayout>
   )
+
+  // return (
+  //   <BrowserRouter>
+  //     <AppRoutes />
+  //   </BrowserRouter>
+  // )
 }

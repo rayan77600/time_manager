@@ -2,6 +2,7 @@
 # Build stage — using Yarn 4 with Node 20
 # ----------------------------------------------------
 FROM node:20-alpine AS build
+
 WORKDIR /app
 
 # Copy package files first

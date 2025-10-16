@@ -14,6 +14,7 @@ class User(SQLModel, table=True):
 	email: EmailStr = Field(index=True, unique=True, nullable=False)
 	phone_number: str = Field(index=True, unique=True)
 	created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+	keycloak_id: Optional[int] = Field(default=None, unique=True)
 
 	clocks: list["Clock"] = Relationship(back_populates="user")
 	team_id: Optional[int] = Field(default=None, foreign_key="teams.id")

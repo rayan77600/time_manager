@@ -1,30 +1,24 @@
-import { useState } from "react";
-import StatCard from "./StatCard";
-import ClockWidget from "./ClockWidget";
-import ClockRecordsTable from "./ClockRecordsTable";
-import TeamMembersCard from "./TeamMembersCard";
-import EmployeeRankingDialog from "./EmployeeRankingDialog";
-import ExportDialog from "./ExportDialog";
-import { Button } from "./ui/button";
+import { useState, useEffect } from 'react'
+import { Button } from './ui/button'
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "./ui/tabs";
-import {
+  LogOut,
   Users,
   Clock,
-  Calendar,
-  TrendingUp,
-  Timer,
-  Award,
-  ClockAlert,
-  User as UserIcon,
+  AlertCircle,
+  CheckCircle,
+  BarChart3,
   Download,
-} from "lucide-react";
-import { User, Clock as ClockType } from "../types";
-import { mockClocks, mockTeams } from "../lib/mockData";
+  FileText,
+  TrendingUp,
+  Play,
+  Square,
+  Calendar as CalendarIcon,
+  History,
+  CalendarDays,
+} from 'lucide-react'
+import GlassCard from './GlassCard'
+import { Badge } from './ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import {
   BarChart,
   Bar,
@@ -33,868 +27,879 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
-} from "recharts";
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
+import { Calendar } from './ui/calendar'
 
-interface ManagerDashboardProps {
-  user: User;
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  department: string
 }
 
-export default function ManagerDashboard({
-  user,
-}: ManagerDashboardProps) {
-  const [metricDialogOpen, setMetricDialogOpen] = useState<
-    "workTime" | "lateTime" | "overtime" | null
-  >(null);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("employee");
+interface ManagerDashboardProps {
+  user: User
+  onLogout: () => void
+}
 
-  // Manager's own clock records (since managers are also employees)
-  const [managerClocks, setManagerClocks] = useState<
-    ClockType[]
-  >(mockClocks.filter((c) => c.user_id === user.id));
+interface TeamMember {
+  id: string
+  name: string
+  status: 'clocked-in' | 'clocked-out' | 'late'
+  clockIn?: string
+  hoursToday: number
+  hoursWeek: number
+  lateCount: number
+  performance: number
+}
 
-  const currentClock =
-    managerClocks.find((c) => !c.clock_out) || null;
+interface ClockEntry {
+  id: string
+  date: string
+  clockIn: string
+  clockOut?: string
+  hoursWorked?: number
+  status: 'complete' | 'late' | 'early-leave'
+}
 
-  const team = mockTeams.find((t) => t.manager_id === user.id);
-  const teamMemberIds = team?.members.map((m) => m.id) || [];
-  const teamClocks = mockClocks.filter((c) =>
-    teamMemberIds.includes(c.user_id),
-  );
+export default function ManagerDashboard({ user, onLogout }: ManagerDashboardProps) {
+  const [isClockedIn, setIsClockedIn] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [clockInTime, setClockInTime] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
 
-  const activeClocks = teamClocks.filter(
-    (c) => !c.clock_out,
-  ).length;
-  const completedClocksThisWeek = teamClocks.filter(
-    (c) => c.clock_out,
-  ).length;
+  // Manager's personal clock entries
+  const [entries] = useState<ClockEntry[]>([
+    {
+      id: '1',
+      date: '2025-10-15',
+      clockIn: '09:00 AM',
+      clockOut: '05:30 PM',
+      hoursWorked: 8.5,
+      status: 'complete',
+    },
+    {
+      id: '2',
+      date: '2025-10-14',
+      clockIn: '08:45 AM',
+      clockOut: '05:15 PM',
+      hoursWorked: 8.5,
+      status: 'complete',
+    },
+    {
+      id: '3',
+      date: '2025-10-13',
+      clockIn: '09:15 AM',
+      clockOut: '06:00 PM',
+      hoursWorked: 8.75,
+      status: 'late',
+    },
+    {
+      id: '4',
+      date: '2025-10-12',
+      clockIn: '09:00 AM',
+      clockOut: '04:45 PM',
+      hoursWorked: 7.75,
+      status: 'early-leave',
+    },
+    {
+      id: '5',
+      date: '2025-10-11',
+      clockIn: '08:50 AM',
+      clockOut: '05:20 PM',
+      hoursWorked: 8.5,
+      status: 'complete',
+    },
+  ])
 
-  const totalHoursThisWeek = teamClocks.reduce((acc, clock) => {
-    if (clock.clock_out) {
-      const diff =
-        new Date(clock.clock_out).getTime() -
-        new Date(clock.clock_in).getTime();
-      return acc + diff / (1000 * 60 * 60);
-    }
-    return acc;
-  }, 0);
+  // Team members data
+  const [teamMembers] = useState<TeamMember[]>([
+    {
+      id: '1',
+      name: 'John Smith',
+      status: 'clocked-in',
+      clockIn: '09:00 AM',
+      hoursToday: 4.5,
+      hoursWeek: 32.5,
+      lateCount: 0,
+      performance: 98,
+    },
+    {
+      id: '2',
+      name: 'Sarah Johnson',
+      status: 'clocked-in',
+      clockIn: '08:45 AM',
+      hoursToday: 4.75,
+      hoursWeek: 35.0,
+      lateCount: 0,
+      performance: 99,
+    },
+    {
+      id: '3',
+      name: 'Michael Chen',
+      status: 'late',
+      clockIn: '09:30 AM',
+      hoursToday: 4.0,
+      hoursWeek: 28.5,
+      lateCount: 3,
+      performance: 85,
+    },
+    {
+      id: '4',
+      name: 'Emily Davis',
+      status: 'clocked-out',
+      hoursToday: 8.5,
+      hoursWeek: 40.0,
+      lateCount: 0,
+      performance: 97,
+    },
+    {
+      id: '5',
+      name: 'David Wilson',
+      status: 'clocked-in',
+      clockIn: '09:00 AM',
+      hoursToday: 4.5,
+      hoursWeek: 36.5,
+      lateCount: 1,
+      performance: 94,
+    },
+    {
+      id: '6',
+      name: 'Lisa Anderson',
+      status: 'clocked-in',
+      clockIn: '08:50 AM',
+      hoursToday: 4.67,
+      hoursWeek: 33.0,
+      lateCount: 0,
+      performance: 96,
+    },
+  ])
 
-  // Calculate average total hours per team member
-  const avgTotalHours =
-    team && team.members.length > 0
-      ? totalHoursThisWeek / team.members.length
-      : 0;
+  const handleClockIn = () => {
+    setIsClockedIn(true)
+    setClockInTime(new Date())
+  }
 
-  // Calculate working days this month for the manager (since manager is also an employee)
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const handleClockOut = () => {
+    setIsClockedIn(false)
+    setClockInTime(null)
+  }
 
-  // Calculate total working days in current month
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  let totalWorkingDays = 0;
+  const getCurrentTimeString = () => {
+    return currentTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  }
 
-  for (
-    let d = new Date(firstDay);
-    d <= lastDay;
-    d.setDate(d.getDate() + 1)
-  ) {
-    const dayOfWeek = d.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      // Not Sunday (0) or Saturday (6)
-      totalWorkingDays++;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const totalHoursThisWeek = entries.reduce((sum, entry) => sum + (entry.hoursWorked || 0), 0)
+  const totalHoursThisMonth = entries.reduce((sum, entry) => sum + (entry.hoursWorked || 0), 0)
+  const avgHoursPerDay = totalHoursThisMonth / entries.length
+
+  // Personal data for charts
+  const weeklyData = [
+    { day: 'Mon', hours: 8.5 },
+    { day: 'Tue', hours: 8.5 },
+    { day: 'Wed', hours: 8.75 },
+    { day: 'Thu', hours: 7.75 },
+    { day: 'Fri', hours: 8.5 },
+  ]
+
+  // Team data
+  const totalTeamMembers = teamMembers.length
+  const clockedIn = teamMembers.filter((m) => m.status === 'clocked-in').length
+  const lateToday = teamMembers.filter((m) => m.status === 'late').length
+  const avgPerformance = teamMembers.reduce((sum, m) => sum + m.performance, 0) / teamMembers.length
+
+  const weeklyTeamData = [
+    { day: 'Mon', hours: 52 },
+    { day: 'Tue', hours: 51.5 },
+    { day: 'Wed', hours: 53 },
+    { day: 'Thu', hours: 48 },
+    { day: 'Fri', hours: 52.5 },
+  ]
+
+  const performanceData = teamMembers.map((m) => ({
+    name: m.name.split(' ')[0],
+    performance: m.performance,
+  }))
+
+  const attendanceData = [
+    { name: 'On Time', value: 75, color: 'rgba(34, 197, 94, 0.8)' },
+    { name: 'Late', value: 15, color: 'rgba(251, 146, 60, 0.8)' },
+    { name: 'Absent', value: 10, color: 'rgba(239, 68, 68, 0.8)' },
+  ]
+
+  const productivityTrend = [
+    { week: 'Week 1', productivity: 92 },
+    { week: 'Week 2', productivity: 94 },
+    { week: 'Week 3', productivity: 91 },
+    { week: 'Week 4', productivity: 95 },
+  ]
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'clocked-in':
+        return <Badge className="bg-green-500/80 text-white border-0">Active</Badge>
+      case 'clocked-out':
+        return <Badge className="bg-gray-500/80 text-white border-0">Off Duty</Badge>
+      case 'late':
+        return <Badge className="bg-orange-500/80 text-white border-0">Late</Badge>
+      case 'complete':
+        return <Badge className="bg-green-500/80 text-white border-0">On Time</Badge>
+      case 'early-leave':
+        return <Badge className="bg-blue-500/80 text-white border-0">Early Leave</Badge>
+      default:
+        return null
     }
   }
 
-  // Calculate days worked this month for the manager
-  const firstDayOfMonth = new Date(year, month, 1);
-  const clocksThisMonth = managerClocks.filter((c) => {
-    const clockDate = new Date(c.clock_in);
-    return clockDate >= firstDayOfMonth && c.clock_out;
-  });
-
-  // Get unique dates worked (in case of multiple clock entries per day)
-  const daysWorkedSet = new Set(
-    clocksThisMonth.map((c) =>
-      new Date(c.clock_in).toDateString(),
-    ),
-  );
-  const daysWorked = daysWorkedSet.size;
-
-  // Calculate Average Work Time per day for the team
-  const completedTeamClocks = teamClocks.filter(
-    (c) => c.clock_out,
-  );
-  const avgWorkTime =
-    completedTeamClocks.length > 0
-      ? completedTeamClocks.reduce((acc, clock) => {
-          const diff =
-            new Date(clock.clock_out!).getTime() -
-            new Date(clock.clock_in).getTime();
-          return acc + diff / (1000 * 60 * 60);
-        }, 0) / completedTeamClocks.length
-      : 0;
-
-  // Calculate Average Late Time (clocking in after 9:00 AM) for the team
-  const lateClocks = teamClocks.filter((c) => {
-    const clockInTime = new Date(c.clock_in);
-    const hours = clockInTime.getHours();
-    const minutes = clockInTime.getMinutes();
-    return hours > 9 || (hours === 9 && minutes > 0);
-  });
-
-  const avgLateTime =
-    lateClocks.length > 0
-      ? lateClocks.reduce((acc, clock) => {
-          const clockInTime = new Date(clock.clock_in);
-          const scheduledStart = new Date(clockInTime);
-          scheduledStart.setHours(9, 0, 0, 0);
-          const lateDiff =
-            clockInTime.getTime() - scheduledStart.getTime();
-          return acc + lateDiff / (1000 * 60);
-        }, 0) / lateClocks.length
-      : 0;
-
-  // Calculate Average Overtime Hours (clocking out after 17:00) for the team
-  const overtimeClocks = completedTeamClocks.filter((c) => {
-    const clockOutTime = new Date(c.clock_out!);
-    const hours = clockOutTime.getHours();
-    const minutes = clockOutTime.getMinutes();
-    return hours > 17 || (hours === 17 && minutes > 0);
-  });
-
-  const avgOvertimeHours =
-    overtimeClocks.length > 0
-      ? overtimeClocks.reduce((acc, clock) => {
-          const clockOutTime = new Date(clock.clock_out!);
-          const scheduledEnd = new Date(clockOutTime);
-          scheduledEnd.setHours(17, 0, 0, 0);
-          const overtimeDiff =
-            clockOutTime.getTime() - scheduledEnd.getTime();
-          return acc + overtimeDiff / (1000 * 60 * 60);
-        }, 0) / overtimeClocks.length
-      : 0;
-
-  // Calculate individual team member metrics for ranking
-  const calculateTeamMemberWorkTime = () => {
-    if (!team) return [];
-    const memberMetrics = team.members.map((member) => {
-      const memberClocks = teamClocks.filter(
-        (c) => c.user_id === member.id && c.clock_out,
-      );
-      const totalWorkTime = memberClocks.reduce(
-        (acc, clock) => {
-          const diff =
-            new Date(clock.clock_out!).getTime() -
-            new Date(clock.clock_in).getTime();
-          return acc + diff / (1000 * 60 * 60);
-        },
-        0,
-      );
-      const avgWorkTime =
-        memberClocks.length > 0
-          ? totalWorkTime / memberClocks.length
-          : 0;
-      return {
-        user: member,
-        value: avgWorkTime,
-        displayValue: `${avgWorkTime.toFixed(1)}h`,
-      };
-    });
-    return memberMetrics.sort((a, b) => b.value - a.value);
-  };
-
-  const calculateTeamMemberLateTime = () => {
-    if (!team) return [];
-    const memberMetrics = team.members.map((member) => {
-      const memberClocks = teamClocks.filter((c) => {
-        if (c.user_id !== member.id) return false;
-        const clockInTime = new Date(c.clock_in);
-        const hours = clockInTime.getHours();
-        const minutes = clockInTime.getMinutes();
-        return hours > 9 || (hours === 9 && minutes > 0);
-      });
-      const totalLateTime = memberClocks.reduce(
-        (acc, clock) => {
-          const clockInTime = new Date(clock.clock_in);
-          const scheduledStart = new Date(clockInTime);
-          scheduledStart.setHours(9, 0, 0, 0);
-          const lateDiff =
-            clockInTime.getTime() - scheduledStart.getTime();
-          return acc + lateDiff / (1000 * 60);
-        },
-        0,
-      );
-      const avgLateTime =
-        memberClocks.length > 0
-          ? totalLateTime / memberClocks.length
-          : 0;
-      return {
-        user: member,
-        value: avgLateTime,
-        displayValue: `${avgLateTime.toFixed(0)} min`,
-      };
-    });
-    return memberMetrics.sort((a, b) => b.value - a.value);
-  };
-
-  const calculateTeamMemberOvertime = () => {
-    if (!team) return [];
-    const memberMetrics = team.members.map((member) => {
-      const memberClocks = teamClocks.filter((c) => {
-        if (c.user_id !== member.id || !c.clock_out)
-          return false;
-        const clockOutTime = new Date(c.clock_out);
-        const hours = clockOutTime.getHours();
-        const minutes = clockOutTime.getMinutes();
-        return hours > 17 || (hours === 17 && minutes > 0);
-      });
-      const totalOvertime = memberClocks.reduce(
-        (acc, clock) => {
-          const clockOutTime = new Date(clock.clock_out!);
-          const scheduledEnd = new Date(clockOutTime);
-          scheduledEnd.setHours(17, 0, 0, 0);
-          const overtimeDiff =
-            clockOutTime.getTime() - scheduledEnd.getTime();
-          return acc + overtimeDiff / (1000 * 60 * 60);
-        },
-        0,
-      );
-      const avgOvertime =
-        memberClocks.length > 0
-          ? totalOvertime / memberClocks.length
-          : 0;
-      return {
-        user: member,
-        value: avgOvertime,
-        displayValue: `${avgOvertime.toFixed(1)}h`,
-      };
-    });
-    return memberMetrics.sort((a, b) => b.value - a.value);
-  };
-
-  // Calculate today's work hours for the manager
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const managerTodayClocks = managerClocks.filter((c) => {
-    const clockDate = new Date(c.clock_in);
-    clockDate.setHours(0, 0, 0, 0);
-    return clockDate.getTime() === today.getTime();
-  });
-
-  const todayWorkHours = managerTodayClocks.reduce(
-    (acc, clock) => {
-      if (clock.clock_out) {
-        const diff =
-          new Date(clock.clock_out).getTime() -
-          new Date(clock.clock_in).getTime();
-        return acc + diff / (1000 * 60 * 60);
-      } else {
-        // If still clocked in, calculate time up to now
-        const diff =
-          new Date().getTime() -
-          new Date(clock.clock_in).getTime();
-        return acc + diff / (1000 * 60 * 60);
-      }
-    },
-    0,
-  );
-
-  // Calculate manager's own hours this week
-  const managerCompletedClocks = managerClocks.filter(
-    (c) => c.clock_out,
-  );
-  const managerHoursThisWeek = managerCompletedClocks.reduce(
-    (acc, clock) => {
-      if (clock.clock_out) {
-        const diff =
-          new Date(clock.clock_out).getTime() -
-          new Date(clock.clock_in).getTime();
-        return acc + diff / (1000 * 60 * 60);
-      }
-      return acc;
-    },
-    0,
-  );
-
-  // Calculate manager's average late time in the past 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const managerRecentClocks = managerClocks.filter(
-    (c) => new Date(c.clock_in) >= thirtyDaysAgo,
-  );
-
-  const managerLateMinutes = managerRecentClocks.map(
-    (clock) => {
-      const clockInDate = new Date(clock.clock_in);
-      const clockInHour = clockInDate.getHours();
-      const clockInMinute = clockInDate.getMinutes();
-      const clockInTotalMinutes =
-        clockInHour * 60 + clockInMinute;
-      const workStartMinutes = 9 * 60; // 9:00 AM in minutes
-
-      return Math.max(
-        0,
-        clockInTotalMinutes - workStartMinutes,
-      );
-    },
-  );
-
-  const managerAvgLateMinutes =
-    managerLateMinutes.length > 0
-      ? managerLateMinutes.reduce((sum, min) => sum + min, 0) /
-        managerLateMinutes.length
-      : 0;
-
-  // Chart data - hours per day for the team
-  const chartData =
-    team?.members.map((member) => {
-      const memberClocks = teamClocks.filter(
-        (c) => c.user_id === member.id && c.clock_out,
-      );
-      const totalHours = memberClocks.reduce((acc, clock) => {
-        if (clock.clock_out) {
-          const diff =
-            new Date(clock.clock_out).getTime() -
-            new Date(clock.clock_in).getTime();
-          return acc + diff / (1000 * 60 * 60);
-        }
-        return acc;
-      }, 0);
-
-      return {
-        name: `${member.first_name} ${member.last_name.charAt(0)}.`,
-        hours: parseFloat(totalHours.toFixed(1)),
-      };
-    }) || [];
-
-  // Clock in/out handlers for the manager
-  const handleClockIn = () => {
-    const newClock: ClockType = {
-      id: Date.now(),
-      user_id: user.id,
-      clock_in: new Date().toISOString(),
-      clock_out: null,
-      created_at: new Date().toISOString(),
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        role: user.role,
-      },
-    };
-    setManagerClocks([newClock, ...managerClocks]);
-  };
-
-  const handleClockOut = () => {
-    setManagerClocks(
-      managerClocks.map((c) =>
-        c.id === currentClock?.id && !c.clock_out
-          ? { ...c, clock_out: new Date().toISOString() }
-          : c,
-      ),
-    );
-  };
+  const handleExportReport = () => {
+    alert('Exporting report... (demo feature)')
+  }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-8">
-      <Tabs defaultValue="employee" className="w-full" value={activeTab} onValueChange={setActiveTab}>
-        <div className="mb-8">
-          <TabsList className="grid grid-cols-2 w-full max-w-md bg-white/5 border border-white/10 text-white/60">
-          <TabsTrigger
-            value="employee"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white/90 text-white/60"
+    <div className="min-h-screen p-6">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-40 left-40 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-40 right-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-white text-3xl mb-1">Manager Dashboard</h1>
+            <p className="text-white/70">
+              {user.department} - {user.name}
+            </p>
+          </div>
+          <Button
+            onClick={onLogout}
+            variant="outline"
+            className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-sm"
           >
-            Employee
-          </TabsTrigger>
-          <TabsTrigger
-            value="team"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white/90 text-white/60"
-          >
-            Team Management
-          </TabsTrigger>
-        </TabsList>
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
         </div>
 
-        {/* Employee Tab */}
-        <TabsContent value="employee" className="mt-0">
-          {/* Employee Info Bar */}
-          <div className="mb-8">
-            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                <div className="flex flex-col">
-                  <span className="text-white/50 text-xs mb-1">
-                    Email
-                  </span>
-                  <span className="text-white/90">
-                    {user.email}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-white/50 text-xs mb-1">
-                    Phone
-                  </span>
-                  <span className="text-white/90">
-                    {user.phone_number}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-white/50 text-xs mb-1">
-                    Team
-                  </span>
-                  <span className="text-white/90">
-                    {team?.name || "Not assigned"}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-white/50 text-xs mb-1">
-                    Manager
-                  </span>
-                  <span className="text-white/90">
-                    {team?.manager
-                      ? `${team.manager.first_name} ${team.manager.last_name}`
-                      : "N/A"}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-white/50 text-xs mb-1">
-                    Member Since
-                  </span>
-                  <span className="text-white/90">
-                    {new Date(
-                      user.created_at,
-                    ).toLocaleDateString("en-US", {
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Tabs Section */}
+        <Tabs defaultValue="my-time" className="w-full">
+          <TabsList className="bg-white/10 border border-white/20 backdrop-blur-sm mb-6">
+            <TabsTrigger value="my-time" className="data-[state=active]:bg-white/20 text-white">
+              <Clock className="w-4 h-4 mr-2" />
+              My Time
+            </TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-white/20 text-white">
+              <History className="w-4 h-4 mr-2" />
+              History
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="data-[state=active]:bg-white/20 text-white">
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Schedule
+            </TabsTrigger>
+            <TabsTrigger value="my-reports" className="data-[state=active]:bg-white/20 text-white">
+              <FileText className="w-4 h-4 mr-2" />
+              My Reports
+            </TabsTrigger>
+            <TabsTrigger value="team" className="data-[state=active]:bg-white/20 text-white">
+              <Users className="w-4 h-4 mr-2" />
+              Team
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-white/20 text-white">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="data-[state=active]:bg-white/20 text-white">
+              <FileText className="w-4 h-4 mr-2" />
+              Team Reports
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Personal Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard
-              title="Hours This Week"
-              value={`${managerHoursThisWeek.toFixed(1)}h`}
-              icon={Clock}
-              description="Total working hours"
-              progress={{
-                current: managerHoursThisWeek,
-                total: 35,
-                unit: "hours",
-              }}
-            />
-            <StatCard
-              title="Average Late Time"
-              value={
-                managerAvgLateMinutes < 1
-                  ? "On Time"
-                  : `${Math.round(managerAvgLateMinutes)} min`
-              }
-              icon={ClockAlert}
-              description="Past 30 days"
-              trend={
-                managerAvgLateMinutes > 0
-                  ? {
-                      value: `${Math.round(managerAvgLateMinutes)} min late`,
-                      positive: false,
-                    }
-                  : undefined
-              }
-            />
-            <StatCard
-              title="Working Days This Month"
-              value={`${daysWorked}/${totalWorkingDays}`}
-              icon={Calendar}
-              description={`${new Date().toLocaleDateString("en-US", { month: "long" })}`}
-              progress={{
-                current: daysWorked,
-                total: totalWorkingDays,
-              }}
-            />
-            <StatCard
-              title="Team"
-              value={team?.name || "No Team"}
-              icon={UserIcon}
-              description={
-                team?.manager?.first_name
-                  ? `Manager: ${team.manager.first_name}`
-                  : "Not assigned"
-              }
-            />
-          </div>
-
-          {/* Clock Widget and Clock Records */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div className="lg:col-span-2">
-              <ClockWidget
-                userId={user.id}
-                currentClock={currentClock}
-                onClockIn={handleClockIn}
-                onClockOut={handleClockOut}
-              />
-            </div>
-
-            <div className="lg:col-span-1">
-              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl overflow-hidden h-[420px] flex flex-col">
-                <h3 className="text-white/80 text-sm p-4 border-b border-white/10 flex-shrink-0">
-                  Your Clock Records
-                </h3>
-                <div className="overflow-y-auto flex-1 min-h-0">
-                  <div className="p-4 space-y-3">
-                    {managerClocks.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Clock className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                        <p className="text-white/50 text-xs">
-                          No records found
-                        </p>
+          {/* My Time Tab */}
+          <TabsContent value="my-time">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <GlassCard>
+                  <div className="text-center py-8">
+                    <div className="flex justify-center mb-6">
+                      <div className="p-6 bg-white/10 rounded-full backdrop-blur-sm border border-white/20">
+                        <Clock className="w-16 h-16 text-white" />
                       </div>
-                    ) : (
-                      managerClocks.slice(0, 5).map((clock) => {
-                        const duration = clock.clock_out
-                          ? (() => {
-                              const diff =
-                                new Date(
-                                  clock.clock_out,
-                                ).getTime() -
-                                new Date(
-                                  clock.clock_in,
-                                ).getTime();
-                              const hours = Math.floor(
-                                diff / (1000 * 60 * 60),
-                              );
-                              const minutes = Math.floor(
-                                (diff % (1000 * 60 * 60)) /
-                                  (1000 * 60),
-                              );
-                              return `${hours}h ${minutes}m`;
-                            })()
-                          : "In Progress";
+                    </div>
+                    <h2 className="text-white text-5xl mb-4">{getCurrentTimeString()}</h2>
+                    <p className="text-white/70 mb-8">
+                      {currentTime.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </p>
 
-                        return (
-                          <div
-                            key={clock.id}
-                            className="bg-white/5 rounded-lg p-3 border border-white/5 transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-top-2"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-white/60 text-xs">
-                                {new Date(
-                                  clock.clock_in,
-                                ).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </span>
-                              <span
-                                className={`text-xs px-2 py-0.5 rounded ${
-                                  clock.clock_out
-                                    ? "bg-green-500/10 text-green-300 border border-green-500/30"
-                                    : "bg-blue-500/10 text-blue-300 border border-blue-500/30"
-                                }`}
-                              >
-                                {clock.clock_out
-                                  ? "Completed"
-                                  : "Active"}
-                              </span>
-                            </div>
-                            <div className="text-xs text-white/70 space-y-1">
-                              <div className="flex justify-between">
-                                <span>In:</span>
-                                <span>
-                                  {new Date(
-                                    clock.clock_in,
-                                  ).toLocaleTimeString(
-                                    "en-US",
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: false,
-                                    },
-                                  )}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Out:</span>
-                                <span>
-                                  {clock.clock_out
-                                    ? new Date(
-                                        clock.clock_out,
-                                      ).toLocaleTimeString(
-                                        "en-US",
-                                        {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                          hour12: false,
-                                        },
-                                      )
-                                    : "-"}
-                                </span>
-                              </div>
-                              <div className="flex justify-between pt-1 border-t border-white/5">
-                                <span>Duration:</span>
-                                <span className="text-white/90">
-                                  {duration}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
+                    {!isClockedIn ? (
+                      <Button
+                        onClick={handleClockIn}
+                        size="lg"
+                        className="bg-green-500/80 hover:bg-green-500 text-white border-0 px-12 backdrop-blur-sm"
+                      >
+                        <Play className="w-5 h-5 mr-2" />
+                        Clock In
+                      </Button>
+                    ) : (
+                      <div>
+                        <div className="mb-4 p-4 bg-green-500/20 rounded-lg border border-green-500/30 backdrop-blur-sm inline-block">
+                          <p className="text-white">
+                            Clocked in at {clockInTime?.toLocaleTimeString('en-US')}
+                          </p>
+                        </div>
+                        <br />
+                        <Button
+                          onClick={handleClockOut}
+                          size="lg"
+                          className="bg-red-500/80 hover:bg-red-500 text-white border-0 px-12 backdrop-blur-sm"
+                        >
+                          <Square className="w-5 h-5 mr-2" />
+                          Clock Out
+                        </Button>
+                      </div>
                     )}
                   </div>
-                </div>
+                </GlassCard>
               </div>
-            </div>
-          </div>
-        </TabsContent>
 
-        {/* Team Management Tab */}
-        <TabsContent value="team" className="mt-0">
-          {/* Team Management Header */}
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-white/90">{team ? team.name : "No team assigned"}</h3>
-            <Button
-              onClick={() => setIsExportDialogOpen(true)}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export as CSV
-            </Button>
-          </div>
-
-          {/* Team Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <StatCard
-              title="Active Now"
-              value={activeClocks}
-              icon={TrendingUp}
-              description="Currently clocked in"
-            />
-            <StatCard
-              title="Avg Hours Per Shift"
-              value={`${avgWorkTime.toFixed(1)}h`}
-              icon={Clock}
-              description="Average shift duration"
-              onClick={() => setMetricDialogOpen("workTime")}
-            />
-            <StatCard
-              title="Avg Late Time"
-              value={`${avgLateTime.toFixed(0)} min`}
-              icon={Timer}
-              description="After 9:00 AM"
-              onClick={() => setMetricDialogOpen("lateTime")}
-            />
-            <StatCard
-              title="Avg Overtime"
-              value={`${avgOvertimeHours.toFixed(1)}h`}
-              icon={Award}
-              description="After 17:00"
-              onClick={() => setMetricDialogOpen("overtime")}
-            />
-          </div>
-
-          {/* Team Information and Performance */}
-          {team && (
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
-              {/* Team Information */}
-              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-6 lg:col-span-2">
-                <h3 className="text-white/90 mb-4">
-                  Team Information
-                </h3>
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center pb-3 border-b border-white/10">
-                      <span className="text-white/60">
-                        Team Name
-                      </span>
-                      <span className="text-white/90">
-                        {team.name}
-                      </span>
+              <div className="space-y-6">
+                <GlassCard>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                      <CalendarIcon className="w-6 h-6 text-blue-300" />
                     </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-white/10">
-                      <span className="text-white/60">
-                        Total Members
-                      </span>
-                      <span className="text-white/90">
-                        {team.members.length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-white/10">
-                      <span className="text-white/60">
-                        Description
-                      </span>
-                      <span className="text-white/90 text-right">
-                        {team.description}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-white/10">
-                      <span className="text-white/60">
-                        Created
-                      </span>
-                      <span className="text-white/90">
-                        {new Date(
-                          team.created_at,
-                        ).toLocaleDateString("en-US", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </span>
+                    <div>
+                      <p className="text-white/70 text-sm">This Week</p>
+                      <p className="text-white text-2xl">{totalHoursThisWeek.toFixed(1)} hrs</p>
                     </div>
                   </div>
-                </div>
-              </div>
+                </GlassCard>
 
-              {/* Team Performance Chart */}
-              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-6 h-[420px] flex flex-col lg:col-span-3">
-                <h3 className="text-white/90 mb-4">
-                  Team Performance
-                </h3>
-                <div className="flex-1">
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
+                <GlassCard>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                      <TrendingUp className="w-6 h-6 text-purple-300" />
+                    </div>
+                    <div>
+                      <p className="text-white/70 text-sm">This Month</p>
+                      <p className="text-white text-2xl">{totalHoursThisMonth.toFixed(1)} hrs</p>
+                    </div>
+                  </div>
+                </GlassCard>
+
+                <GlassCard>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+                      <TrendingUp className="w-6 h-6 text-green-300" />
+                    </div>
+                    <div>
+                      <p className="text-white/70 text-sm">Average/Day</p>
+                      <p className="text-white text-2xl">{avgHoursPerDay.toFixed(1)} hrs</p>
+                    </div>
+                  </div>
+                </GlassCard>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history">
+            <GlassCard>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-white text-xl">My Clock History</h3>
+                <Button
+                  onClick={handleExportReport}
+                  variant="outline"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-sm"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {entries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="p-4 bg-white/5 rounded-lg border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors"
                   >
-                    <BarChart data={chartData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="rgba(255,255,255,0.1)"
-                      />
-                      <XAxis
-                        dataKey="name"
-                        stroke="rgba(255,255,255,0.6)"
-                        tick={{ fill: "rgba(255,255,255,0.6)" }}
-                      />
-                      <YAxis
-                        stroke="rgba(255,255,255,0.6)"
-                        tick={{ fill: "rgba(255,255,255,0.6)" }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "rgba(0,0,0,0.8)",
-                          border:
-                            "1px solid rgba(255,255,255,0.2)",
-                          borderRadius: "8px",
-                          color: "white",
-                        }}
-                      />
-                      <Legend
-                        wrapperStyle={{
-                          color: "rgba(255,255,255,0.6)",
-                        }}
-                      />
-                      <Bar
-                        dataKey="hours"
-                        fill="url(#colorGradient)"
-                        radius={[8, 8, 0, 0]}
-                        name="Hours Worked"
-                      />
-                      <defs>
-                        <linearGradient
-                          id="colorGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#3b82f6"
-                            stopOpacity={0.8}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#06b6d4"
-                            stopOpacity={0.8}
-                          />
-                        </linearGradient>
-                      </defs>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <p className="text-white mb-1">
+                          {new Date(entry.date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </p>
+                        <p className="text-white/60 text-sm">
+                          In: {entry.clockIn} - Out: {entry.clockOut}
+                        </p>
+                      </div>
+                      <div className="text-right flex items-center gap-4">
+                        <div>
+                          <p className="text-white text-lg">{entry.hoursWorked} hrs</p>
+                        </div>
+                        {getStatusBadge(entry.status)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
+            </GlassCard>
+          </TabsContent>
 
-          {/* Team Members and Clock Records */}
-          {team && (
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-              {/* Team Members */}
-              <div className="lg:col-span-2 h-full">
-                <TeamMembersCard members={team.members} />
-              </div>
-
-              {/* Team Clock Records */}
-              <div className="lg:col-span-3 h-full">
-                <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-6 h-full flex flex-col">
-                  <h3 className="text-white/90 mb-4">
-                    Team Clock Records
-                  </h3>
-                  <div className="flex-1 overflow-auto">
-                    <ClockRecordsTable
-                      clocks={teamClocks}
-                      showUser={true}
+          {/* Schedule Tab */}
+          <TabsContent value="schedule">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <GlassCard>
+                <h3 className="text-white text-xl mb-6">Weekly Hours</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={weeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.7)" />
+                    <YAxis stroke="rgba(255,255,255,0.7)" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                      }}
+                      labelStyle={{ color: '#fff' }}
                     />
+                    <Bar dataKey="hours" fill="rgba(59, 130, 246, 0.8)" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white text-xl mb-6">Calendar View</h3>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="rounded-md border border-white/20 bg-white/5 text-white"
+                  />
+                </div>
+              </GlassCard>
+
+              <GlassCard className="lg:col-span-2">
+                <h3 className="text-white text-xl mb-4">Next Week's Schedule</h3>
+                <div className="space-y-2">
+                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day, index) => (
+                    <div
+                      key={day}
+                      className="p-3 bg-white/5 rounded-lg border border-white/10 flex justify-between items-center"
+                    >
+                      <span className="text-white">
+                        {day} Oct {17 + index}
+                      </span>
+                      <span className="text-white/70">09:00 - 17:30</span>
+                      <Badge className="bg-blue-500/80 text-white border-0">8.5hrs</Badge>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+            </div>
+          </TabsContent>
+
+          {/* My Reports Tab */}
+          <TabsContent value="my-reports">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <GlassCard>
+                <h3 className="text-white mb-4">Monthly Summary</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Days Worked</span>
+                    <span className="text-white">5 days</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Total Hours</span>
+                    <span className="text-white">{totalHoursThisMonth.toFixed(1)}hrs</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Late Count</span>
+                    <span className="text-orange-400">1 time</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Overtime</span>
+                    <span className="text-green-400">+2.5hrs</span>
                   </div>
                 </div>
-              </div>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white mb-4">Compliance</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Attendance Rate</span>
+                    <span className="text-green-400">100%</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Punctuality</span>
+                    <span className="text-green-400">80%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Overall Score</span>
+                    <span className="text-green-400">90%</span>
+                  </div>
+                </div>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white mb-4">Goals</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Required Hours</span>
+                    <span className="text-white">160hrs/month</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Progress</span>
+                    <span className="text-blue-400">27%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Days Left</span>
+                    <span className="text-white">12 days</span>
+                  </div>
+                </div>
+              </GlassCard>
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
 
-      {/* Employee Ranking Dialogs */}
-      <EmployeeRankingDialog
-        open={metricDialogOpen === "workTime"}
-        onOpenChange={(open) =>
-          !open && setMetricDialogOpen(null)
-        }
-        title="Average Work Time per Day"
-        description="Team members ranked by their average daily work hours"
-        employees={calculateTeamMemberWorkTime()}
-        metricLabel="avg per day"
-      />
+          {/* Team Tab */}
+          <TabsContent value="team">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              <GlassCard>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                    <Users className="w-6 h-6 text-blue-300" />
+                  </div>
+                  <div>
+                    <p className="text-white/70 text-sm">Team Members</p>
+                    <p className="text-white text-3xl">{totalTeamMembers}</p>
+                  </div>
+                </div>
+              </GlassCard>
 
-      <EmployeeRankingDialog
-        open={metricDialogOpen === "lateTime"}
-        onOpenChange={(open) =>
-          !open && setMetricDialogOpen(null)
-        }
-        title="Average Late Time"
-        description="Team members ranked by their average late arrival time (after 9:00 AM)"
-        employees={calculateTeamMemberLateTime()}
-        metricLabel="avg late"
-      />
+              <GlassCard>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+                    <CheckCircle className="w-6 h-6 text-green-300" />
+                  </div>
+                  <div>
+                    <p className="text-white/70 text-sm">Active</p>
+                    <p className="text-white text-3xl">{clockedIn}</p>
+                  </div>
+                </div>
+              </GlassCard>
 
-      <EmployeeRankingDialog
-        open={metricDialogOpen === "overtime"}
-        onOpenChange={(open) =>
-          !open && setMetricDialogOpen(null)
-        }
-        title="Average Overtime"
-        description="Team members ranked by their average overtime hours (after 17:00)"
-        employees={calculateTeamMemberOvertime()}
-        metricLabel="avg overtime"
-      />
+              <GlassCard>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-orange-500/20 rounded-lg border border-orange-500/30">
+                    <AlertCircle className="w-6 h-6 text-orange-300" />
+                  </div>
+                  <div>
+                    <p className="text-white/70 text-sm">Late Today</p>
+                    <p className="text-white text-3xl">{lateToday}</p>
+                  </div>
+                </div>
+              </GlassCard>
 
-      <ExportDialog
-        open={isExportDialogOpen}
-        onOpenChange={setIsExportDialogOpen}
-        userRole={user.role}
-        kpiData={{
-          teamName: team?.name,
-          totalEmployees: teamMemberIds.length,
-          activeClocks: activeClocks,
-          avgHoursPerShift: avgWorkTime,
-          avgLateTime: avgLateTime,
-          avgOvertime: avgOvertimeHours,
-        }}
-      />
+              <GlassCard>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                    <TrendingUp className="w-6 h-6 text-purple-300" />
+                  </div>
+                  <div>
+                    <p className="text-white/70 text-sm">Avg Performance</p>
+                    <p className="text-white text-3xl">{avgPerformance.toFixed(0)}%</p>
+                  </div>
+                </div>
+              </GlassCard>
+            </div>
+
+            <GlassCard>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-white text-xl">Team Members</h3>
+                <div className="text-white/60 text-sm">
+                  {new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left text-white/70 pb-3">Employee</th>
+                      <th className="text-left text-white/70 pb-3">Status</th>
+                      <th className="text-left text-white/70 pb-3">Clock In</th>
+                      <th className="text-right text-white/70 pb-3">Hrs Today</th>
+                      <th className="text-right text-white/70 pb-3">Hrs Week</th>
+                      <th className="text-right text-white/70 pb-3">Late</th>
+                      <th className="text-right text-white/70 pb-3">Performance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamMembers.map((member) => (
+                      <tr
+                        key={member.id}
+                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                      >
+                        <td className="py-4 text-white">{member.name}</td>
+                        <td className="py-4">{getStatusBadge(member.status)}</td>
+                        <td className="py-4 text-white/70">{member.clockIn || '-'}</td>
+                        <td className="py-4 text-white text-right">{member.hoursToday}h</td>
+                        <td className="py-4 text-white text-right">{member.hoursWeek}h</td>
+                        <td className="py-4 text-center">
+                          {member.lateCount > 0 ? (
+                            <Badge className="bg-orange-500/80 text-white border-0">
+                              {member.lateCount}
+                            </Badge>
+                          ) : (
+                            <span className="text-white/50">0</span>
+                          )}
+                        </td>
+                        <td className="py-4 text-right">
+                          <Badge
+                            className={`${member.performance >= 95 ? 'bg-green-500/80' : member.performance >= 90 ? 'bg-blue-500/80' : 'bg-orange-500/80'} text-white border-0`}
+                          >
+                            {member.performance}%
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <GlassCard>
+                <h3 className="text-white text-xl mb-6">Team Hours - Week</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={weeklyTeamData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.7)" />
+                    <YAxis stroke="rgba(255,255,255,0.7)" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                      }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                    <Bar dataKey="hours" fill="rgba(59, 130, 246, 0.8)" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white text-xl mb-6">Performance by Member</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={performanceData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis type="number" stroke="rgba(255,255,255,0.7)" domain={[0, 100]} />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      stroke="rgba(255,255,255,0.7)"
+                      width={80}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                      }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                    <Bar
+                      dataKey="performance"
+                      fill="rgba(168, 85, 247, 0.8)"
+                      radius={[0, 8, 8, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white text-xl mb-6">Attendance Distribution</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={attendanceData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {attendanceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                      }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white text-xl mb-6">Productivity Trend</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={productivityTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="week" stroke="rgba(255,255,255,0.7)" />
+                    <YAxis stroke="rgba(255,255,255,0.7)" domain={[85, 100]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                      }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="productivity"
+                      stroke="rgba(34, 197, 94, 0.8)"
+                      strokeWidth={3}
+                      dot={{ fill: 'rgba(34, 197, 94, 1)', r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            </div>
+          </TabsContent>
+
+          {/* Team Reports Tab */}
+          <TabsContent value="reports">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <GlassCard>
+                <h3 className="text-white mb-4">Team KPIs - Week</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Total Hours</span>
+                    <span className="text-white">257h</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Overtime</span>
+                    <span className="text-green-400">+17h</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <span className="text-white/70">Attendance Rate</span>
+                    <span className="text-green-400">98%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Productivity</span>
+                    <span className="text-green-400">95%</span>
+                  </div>
+                </div>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white mb-4">Alerts & Actions</h3>
+                <div className="space-y-3">
+                  <div className="p-3 bg-orange-500/20 rounded-lg border border-orange-500/30">
+                    <p className="text-white text-sm mb-1">3 late arrivals this week</p>
+                    <p className="text-white/60 text-xs">Review causes</p>
+                  </div>
+                  <div className="p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                    <p className="text-white text-sm mb-1">High workload</p>
+                    <p className="text-white/60 text-xs">2 members &gt; 40h/week</p>
+                  </div>
+                  <div className="p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+                    <p className="text-white text-sm mb-1">Excellent punctuality</p>
+                    <p className="text-white/60 text-xs">4 members no late</p>
+                  </div>
+                </div>
+              </GlassCard>
+
+              <GlassCard>
+                <h3 className="text-white mb-4">Export Reports</h3>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleExportReport}
+                    className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Weekly Report
+                  </Button>
+                  <Button
+                    onClick={handleExportReport}
+                    className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Monthly Report
+                  </Button>
+                </div>
+              </GlassCard>
+            </div>
+
+            <GlassCard>
+              <h3 className="text-white text-xl mb-4">Top Performers this Month</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {teamMembers
+                  .sort((a, b) => b.performance - a.performance)
+                  .slice(0, 3)
+                  .map((member, index) => (
+                    <div
+                      key={member.id}
+                      className="p-4 bg-white/5 rounded-lg border border-white/10 text-center"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-3 text-white text-xl">
+                        {index + 1}
+                      </div>
+                      <p className="text-white mb-1">{member.name}</p>
+                      <p className="text-green-400">{member.performance}% Performance</p>
+                      <p className="text-white/60 text-sm">{member.hoursWeek}h this week</p>
+                    </div>
+                  ))}
+              </div>
+            </GlassCard>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
-  );
+  )
 }
