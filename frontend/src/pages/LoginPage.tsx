@@ -33,6 +33,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         navigate('/dashboard')
       }
     } catch (err) {
+      console.error(err)
       setError('Invalid credentials. Please try again.')
     } finally {
       setLoading(false)

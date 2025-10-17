@@ -1,15 +1,29 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import './index.css'
+import { StrictMode, lazy, Suspense } from 'react'
+import { KcPage, type KcContext } from './keycloak-theme/kc.gen'
 
-const queryClient = new QueryClient()
+const AppEntrypoint = lazy(() => import('./main.app'))
+
+// (optionnel - mock en dev)
+// import { getKcContextMock } from "./keycloak-theme/login/KcPageStory";
+// if (import.meta.env.DEV) {
+//   window.kcContext = getKcContextMock({ pageId: "login.ftl", overrides: {} });
+// }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    {window.kcContext ? (
+      <KcPage kcContext={window.kcContext} />
+    ) : (
+      <Suspense>
+        <AppEntrypoint />
+      </Suspense>
+    )}
   </StrictMode>,
 )
+
+declare global {
+  interface Window {
+    kcContext?: KcContext
+  }
+}
