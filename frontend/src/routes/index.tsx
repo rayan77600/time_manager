@@ -1,24 +1,29 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+
 import LoginPage from '@/pages/LoginPage'
 import UserDashboard from '@/pages/UserDashboard'
 import ManagerDashboard from '@/pages/ManagerDashboard'
 import OrganizationDashboard from '@/pages/OrganizationDashboard'
-import { useAuth } from '@/hooks/useAuth'
 
-// Protected route wrapper
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles: string[]
+  allowedRoles?: string[] // facultatif pour autoriser tout utilisateur connecté
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, isAuthenticated } = useAuth()
+  const { keycloak, authenticated } = useAuth()
 
-  if (!isAuthenticated) {
+  // 🔒 Pas connecté → rediriger vers login
+  if (!authenticated) {
     return <Navigate to="/login" replace />
   }
 
-  if (!allowedRoles.includes(user?.role || '')) {
+  // 🔐 Récupérer les rôles depuis le token Keycloak
+  const roles = keycloak.tokenParsed?.realm_access?.roles || []
+
+  // Si la route est limitée à certains rôles et que l'utilisateur n'en fait pas partie
+  if (allowedRoles && !allowedRoles.some((role) => roles.includes(role))) {
     return <Navigate to="/unauthorized" replace />
   }
 
@@ -26,14 +31,17 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 }
 
 export const AppRoutes = () => {
-  const { login } = useAuth()
+  const { authenticated } = useAuth()
 
   return (
     <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<LoginPage onLogin={login} />} />
+      {/* --- Public --- */}
+      <Route
+        path="/login"
+        element={authenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+      />
 
-      {/* Protected routes by role */}
+      {/* --- Dashboards protégés --- */}
       <Route
         path="/dashboard"
         element={
@@ -61,10 +69,10 @@ export const AppRoutes = () => {
         }
       />
 
-      {/* Default redirects */}
+      {/* --- Routes par défaut --- */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/unauthorized" element={<div>Access Denied</div>} />
-      <Route path="*" element={<div>404 Not Found</div>} />
+      <Route path="/unauthorized" element={<div>🚫 Accès refusé</div>} />
+      <Route path="*" element={<div>❌ 404 - Page introuvable</div>} />
     </Routes>
   )
 }
