@@ -1,9 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useEffect, useState } from 'react'
 import keycloak from './keycloak'
-
+import Keycloak from 'keycloak-js'
 interface AuthContextType {
-  keycloak: Keycloak.KeycloakInstance
+  keycloak: Keycloak
   authenticated: boolean
   initialized: boolean
   logout: () => void
