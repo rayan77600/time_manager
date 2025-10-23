@@ -3,8 +3,7 @@ import UserDashboardView from '@/components/UserDashboard'
 // import { useAuth } from '@/hooks/useAuth'
 import { useUser } from '@/hooks/useUser'
 import { useState } from 'react'
-
-const logout = () => {}
+import { logout } from '@/auth/logout'
 
 export default function UserDashboardPage() {
   // const { user, logout } = useAuth()
