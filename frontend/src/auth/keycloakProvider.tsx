@@ -30,6 +30,12 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
       .then((auth) => {
         setAuthenticated(auth)
         setInitialized(true)
+                if (auth && keycloak.token) {
+                  localStorage.setItem('kc_token', keycloak.token)
+                  console.log('✅ Token complet :', keycloak.token)
+                  console.log('🧩 Token décodé :', keycloak.tokenParsed)
+         
+        }
       })
       .catch((err) => {
         console.error('[Keycloak] Init error', err)
