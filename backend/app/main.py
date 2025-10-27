@@ -3,6 +3,10 @@ from app.security import get_current_user
 from sqlmodel import SQLModel                   
 from app.routers import users, clocks, teams
 from app.database import engine
+from fastapi import Response, Body
+from app.security import verify_jwt
+from fastapi import Depends
+from app.security import get_current_user, get_current_user_from_cookie
 
 app = FastAPI(
 	title="Time Manager API",
@@ -17,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # 🔹 Autoriser le front (React) à communiquer avec le back
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["http://localhost:3000"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,6 +35,27 @@ def on_startup():
 async def root():
 	return {"message": "Connected to the PostgreSQL DB via SQLModel!"}
 
-app.include_router(users.router, dependencies=[Depends(get_current_user)])
-app.include_router(clocks.router, dependencies=[Depends(get_current_user)])
-app.include_router(teams.router, dependencies=[Depends(get_current_user)])
+@app.post("/auth/session")
+async def create_session(response: Response, token: str = Body(..., embed=True)):
+    """
+    🔐 Reçoit le token Keycloak du frontend et crée un cookie de session.
+    """
+    # Vérifie que le token est bien valide
+    await verify_jwt(token)
+
+    # Crée le cookie de session (valide pour 1h)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=False,  
+        samesite="Lax",
+        max_age=3600,
+    )
+    return {"message": "Session créée avec succès"}
+
+auth_dep = Depends(get_current_user_from_cookie)
+
+app.include_router(users.router, dependencies=[auth_dep])
+app.include_router(clocks.router, dependencies=[auth_dep])
+app.include_router(teams.router, dependencies=[auth_dep])

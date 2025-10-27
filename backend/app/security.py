@@ -4,6 +4,13 @@ from fastapi import HTTPException, Request
 from jose import jwt
 import httpx, time
 from app.settings import settings
+from fastapi import Request
+
+async def get_current_user_from_cookie(req: Request):
+    token = req.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing cookie token")
+    return await verify_jwt(token)
 
 _JWKS: Optional[Dict[str, Any]] = None
 _JWKS_EXP = 0

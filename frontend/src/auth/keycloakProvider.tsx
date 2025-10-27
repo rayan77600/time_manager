@@ -1,6 +1,19 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useEffect, useState } from 'react'
 import keycloak from './keycloak'
+import { api } from '@/lib/api' // ✅ AJOUT: wrapper fetch avec Bearer token
+
+async function loadUsers() {
+  const res = await api.get('/users/')
+  if (!res.ok) {
+    console.warn('[API] /users/ error:', res.status)
+    const txt = await res.text().catch(() => '')
+    console.warn('[API] body:', txt)
+    return
+  }
+  const users = await res.json()
+  console.log('👤 Users:', users)
+}
 
 interface AuthContextType {
   keycloak: Keycloak.KeycloakInstance
@@ -30,11 +43,21 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
       .then((auth) => {
         setAuthenticated(auth)
         setInitialized(true)
-                if (auth && keycloak.token) {
-                  localStorage.setItem('kc_token', keycloak.token)
-                  console.log('✅ Token complet :', keycloak.token)
-                  console.log('🧩 Token décodé :', keycloak.tokenParsed)
-         
+        if (auth && keycloak.token) {
+          localStorage.setItem('kc_token', keycloak.token)
+          console.log('✅ Token complet :', keycloak.token)
+          console.log('🧩 Token décodé :', keycloak.tokenParsed)
+
+          // 🔹 AJOUT : envoie le token au backend pour créer le cookie de session
+          fetch("http://localhost:4000/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include", // ✅ indispensable pour envoyer/recevoir les cookies
+            body: JSON.stringify({ token: keycloak.token }),
+          })
+            .then(res => res.json())
+            .then(data => console.log("🍪 Session créée côté backend :", data))
+            .catch(err => console.error("Erreur création session :", err))
         }
       })
       .catch((err) => {
@@ -42,6 +65,13 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
         setInitialized(true)
       })
   }, [])
+
+  // ✅ AJOUT : tester l’API seulement après authentification
+  useEffect(() => {
+    if (initialized && authenticated) {
+      loadUsers()
+    }
+  }, [initialized, authenticated])
 
   const handleLogout = () => {
     localStorage.clear()
