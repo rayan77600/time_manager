@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Team } from "../types";
+import { Team } from "../types/team";
 import { Users, Edit } from "lucide-react";
 
 interface TeamsTableProps {

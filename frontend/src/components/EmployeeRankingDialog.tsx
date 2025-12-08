@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
-import { User } from "../types";
+import { User } from "../types/team";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 
 interface EmployeeMetric {

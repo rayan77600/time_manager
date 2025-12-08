@@ -4,10 +4,17 @@ import DashboardLayout from './components/DashboardLayout'
 import EmployeeDashboard from './components/EmployeeDashboard'
 import ManagerDashboard from './components/ManagerDashboard'
 import OrganizationDashboard from './components/OrganizationDashboard'
-import { UserRole, User } from './types'
+import type { User } from './types/user'
+import { UserRole } from './types/user'
 import { mockUsers } from './lib/mockData'
+import { useUser } from './hooks/useUser'
 
 export default function App() {
+  const [userId] = useState<number>(1)
+  const authToken = null
+
+  const { data: user, isLoading, isError, error, refetch } = useUser(userId, authToken)
+
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
 
@@ -37,9 +44,9 @@ export default function App() {
       case UserRole.MANAGER:
         return <ManagerDashboard user={currentUser} />
       case UserRole.EMPLOYEE:
-        return <EmployeeDashboard user={currentUser} />
+        return user ? <EmployeeDashboard user={user} /> : <p>Loading...</p>
       default:
-        return <EmployeeDashboard user={currentUser} />
+        return user ? <EmployeeDashboard user={user} /> : <p>Loading...</p>
     }
   }
 

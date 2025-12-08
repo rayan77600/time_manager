@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
-import { Team } from "../types";
+import { Team } from "../types/team";
 import { Badge } from "./ui/badge";
 import { Users, Mail, Clock as ClockIcon, Calendar } from "lucide-react";
 import { mockClocks, mockUsers } from "../lib/mockData";

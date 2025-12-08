@@ -23,7 +23,7 @@ import {
   User as UserIcon,
   Download,
 } from "lucide-react";
-import { User, Clock as ClockType } from "../types";
+import { User, Clock as ClockType } from "../types/team";
 import { mockClocks, mockTeams } from "../lib/mockData";
 import {
   BarChart,

@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Clock, User } from "../types";
+import { Clock, User } from "../types/team";
 import { Clock as ClockIcon } from "lucide-react";
 import { mockUsers } from "../lib/mockData";
 import EmployeeDetailView from "./EmployeeDetailView";

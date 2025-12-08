@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Clock as ClockIcon, Play, Square } from "lucide-react";
-import { Clock } from "../types";
+import { Clock } from "../types/team";
 
 interface ClockWidgetProps {
   userId: number;

@@ -1,44 +1,50 @@
-import { ReactNode, useState } from "react";
-import { Button } from "./ui/button";
-import { LogOut, User, UsersRound, Plus, Building2 } from "lucide-react";
-import { UserRole } from "../types";
-import PasswordChangeDialog from "./PasswordChangeDialog";
-import EmployeeEditDialog from "./EmployeeEditDialog";
-import logo from "/primebank_logo.png";
+import { ReactNode, useState } from 'react'
+import { Button } from './ui/button'
+import { LogOut, User, UsersRound, Plus, Building2 } from 'lucide-react'
+import { UserRole } from '../types/user'
+import PasswordChangeDialog from './PasswordChangeDialog'
+import EmployeeEditDialog from './EmployeeEditDialog'
+import logo from '/primebank_logo.png'
 
 interface DashboardLayoutProps {
-  children: ReactNode;
-  userRole: UserRole;
-  userName: string;
-  userEmail: string;
-  onLogout: () => void;
+  children: ReactNode
+  userRole: UserRole
+  userName: string
+  userEmail: string
+  onLogout: () => void
 }
 
-export default function DashboardLayout({ children, userRole, userName, userEmail, onLogout }: DashboardLayoutProps) {
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [isEmployeeEditOpen, setIsEmployeeEditOpen] = useState(false);
+export default function DashboardLayout({
+  children,
+  userRole,
+  userName,
+  userEmail,
+  onLogout,
+}: DashboardLayoutProps) {
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [isEmployeeEditOpen, setIsEmployeeEditOpen] = useState(false)
 
   const getRoleDisplay = () => {
     switch (userRole) {
       case UserRole.ORGANIZATION:
-        return "Organization Admin";
+        return 'Organization Admin'
       case UserRole.MANAGER:
-        return "Team Manager";
+        return 'Team Manager'
       default:
-        return "Employee";
+        return 'Employee'
     }
-  };
+  }
 
   const getRoleIcon = () => {
     switch (userRole) {
       case UserRole.ORGANIZATION:
-        return <Building2 className="w-5 h-5" />;
+        return <Building2 className="w-5 h-5" />
       case UserRole.MANAGER:
-        return <UsersRound className="w-5 h-5" />;
+        return <UsersRound className="w-5 h-5" />
       default:
-        return <User className="w-5 h-5" />;
+        return <User className="w-5 h-5" />
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 relative overflow-hidden">
@@ -72,8 +78,8 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                   Add Employee
                 </Button>
               )}
-              
-              <div 
+
+              <div
                 onClick={() => setIsPasswordDialogOpen(true)}
                 className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-xl backdrop-blur-xl bg-gradient-to-br from-white/5 to-white/10 border border-white/20 hover:border-blue-400/50 hover:from-white/10 hover:to-white/15 cursor-pointer transition-all duration-300 group relative overflow-hidden"
               >
@@ -82,11 +88,15 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                   {getRoleIcon()}
                 </div>
                 <div className="text-right relative z-10">
-                  <p className="text-sm text-white group-hover:text-white transition-colors duration-300">{userName}</p>
-                  <p className="text-xs text-white/60 group-hover:text-blue-300/80 transition-colors duration-300">{getRoleDisplay()}</p>
+                  <p className="text-sm text-white group-hover:text-white transition-colors duration-300">
+                    {userName}
+                  </p>
+                  <p className="text-xs text-white/60 group-hover:text-blue-300/80 transition-colors duration-300">
+                    {getRoleDisplay()}
+                  </p>
                 </div>
               </div>
-              
+
               <Button
                 variant="outline"
                 onClick={onLogout}
@@ -101,9 +111,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
       </header>
 
       {/* Main content */}
-      <main className="relative">
-        {children}
-      </main>
+      <main className="relative">{children}</main>
 
       {/* Password Change Dialog */}
       <PasswordChangeDialog
@@ -122,5 +130,5 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
         />
       )}
     </div>
-  );
+  )
 }

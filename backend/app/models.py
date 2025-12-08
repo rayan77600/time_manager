@@ -134,6 +134,7 @@ class UserMinimal(SQLModel):
 	first_name: str
 	last_name: str
 	email: EmailStr
+	phone_number: str
 
 # *** Clock model ***
 class Clock(SQLModel, table=True):

@@ -25,7 +25,7 @@ import {
   TabsTrigger,
 } from "./ui/tabs";
 import { Button } from "./ui/button";
-import { User, Team } from "../types";
+import { User, Team } from "../types/team";
 import {
   mockUsers,
   mockTeams,

@@ -1,42 +1,43 @@
-import { useState } from "react";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
-import { UserMinimal, UserRole, User } from "../types";
-import { Users } from "lucide-react";
-import { mockUsers } from "../lib/mockData";
-import EmployeeDetailView from "./EmployeeDetailView";
+import { useState } from 'react'
+import { Avatar, AvatarFallback } from './ui/avatar'
+import { Badge } from './ui/badge'
+import type { User, UserMinimal } from '../types/user'
+import { UserRole } from '../types/user'
+import { Users } from 'lucide-react'
+import { mockUsers } from '../lib/mockData'
+import EmployeeDetailView from './EmployeeDetailView'
 
 interface TeamMembersCardProps {
-  members: UserMinimal[];
-  title?: string;
+  members: UserMinimal[]
+  title?: string
 }
 
-export default function TeamMembersCard({ members, title = "Team Members" }: TeamMembersCardProps) {
-  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+export default function TeamMembersCard({ members, title = 'Team Members' }: TeamMembersCardProps) {
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   const handleMemberClick = (member: UserMinimal) => {
     // Find the full user object from mockUsers
-    const fullUser = mockUsers.find(u => u.id === member.id);
+    const fullUser = mockUsers.find((u) => u.id === member.id)
     if (fullUser) {
-      setSelectedEmployee(fullUser);
-      setIsDetailOpen(true);
+      setSelectedEmployee(fullUser)
+      setIsDetailOpen(true)
     }
-  };
+  }
   const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  }
 
   const getRoleBadgeColor = (role: UserRole) => {
     switch (role) {
       case UserRole.MANAGER:
-        return "bg-purple-500/10 border-purple-500/30 text-purple-300";
+        return 'bg-purple-500/10 border-purple-500/30 text-purple-300'
       case UserRole.ORGANIZATION:
-        return "bg-blue-500/10 border-blue-500/30 text-blue-300";
+        return 'bg-blue-500/10 border-blue-500/30 text-blue-300'
       default:
-        return "bg-green-500/10 border-green-500/30 text-green-300";
+        return 'bg-green-500/10 border-green-500/30 text-green-300'
     }
-  };
+  }
 
   if (members.length === 0) {
     return (
@@ -44,7 +45,7 @@ export default function TeamMembersCard({ members, title = "Team Members" }: Tea
         <Users className="w-12 h-12 text-white/30 mx-auto mb-4" />
         <p className="text-white/60">No team members found</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -77,11 +78,11 @@ export default function TeamMembersCard({ members, title = "Team Members" }: Tea
         </div>
       </div>
 
-      <EmployeeDetailView 
+      <EmployeeDetailView
         user={selectedEmployee}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
       />
     </>
-  );
+  )
 }
