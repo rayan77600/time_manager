@@ -2,10 +2,11 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /code
 
-COPY requirements.txt .
+COPY backend/requirements.txt ./requirements.txt
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./app /code/app
+COPY backend/app /code/app
 
 EXPOSE 80
 
